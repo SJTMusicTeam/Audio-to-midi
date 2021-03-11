@@ -1,6 +1,6 @@
 import os, time, sys
 import numpy as np
-from pypianoroll import Multitrack, Track
+from pypianoroll import Multitrack, BinaryTrack, StandardTrack
 import cfp
 import torch
 import torch.nn as nn
@@ -198,12 +198,11 @@ def seq2roll(seq):
     roll = smoothing(roll)
     return roll
 
-def write_midi(filepath, pianorolls, program_nums=None, is_drums=None,
-               track_names=None, velocity=100, tempo=170.0, beat_resolution=16):
+def write_midi(wavlength, filepath, pianorolls, program_nums=None, is_drums=None,
+               track_names=None, beat_resolution=16):
     
     #if not os.path.exists(filepath):
     #    os.makedirs(filepath)
-
     if not np.issubdtype(pianorolls.dtype, np.bool_):
         raise TypeError("Support only binary-valued piano-rolls")
     if isinstance(program_nums, int):
@@ -221,17 +220,20 @@ def write_midi(filepath, pianorolls, program_nums=None, is_drums=None,
     if is_drums is None:
         is_drums = [False] * len(pianorolls)
 
-    multitrack = Multitrack(beat_resolution=beat_resolution, tempo=tempo)
+    tempo = [60 * pianorolls.shape[0] / beat_resolution / wavlength]
+
+
+    multitrack = Multitrack(resolution=beat_resolution, tempo=tempo)
     for idx in range(pianorolls.shape[2]):
-        #plt.subplot(10,1,idx+1)
-        #plt.imshow(pianorolls[..., idx].T,cmap=plt.cm.binary, interpolation='nearest', aspect='auto')
+        # plt.subplot(10,1,idx+1)
+        # plt.imshow(pianorolls[..., idx].T,cmap=plt.cm.binary, interpolation='nearest', aspect='auto')
         if track_names is None:
-            track = Track(pianorolls[..., idx], program_nums[idx],
-                          is_drums[idx])
+            track = BinaryTrack(pianoroll=pianorolls[..., idx], program=program_nums[idx],
+                          is_drum=is_drums[idx])
         else:
-            track = Track(pianorolls[..., idx], program_nums[idx],
-                          is_drums[idx], track_names[idx])
-        multitrack.append_track(track)
+            track = BinaryTrack(pianoroll=pianorolls[..., idx], program=program_nums[idx],
+                          is_drum=is_drums[idx], name=track_names[idx])
+        multitrack.append(track)
     #plt.savefig(cf.MP3Name)
     multitrack.write(filepath)
 
@@ -262,7 +264,8 @@ def main(file_path, model_path, output_path):
     print('     Melody  extraction ... Done. Time:', int(time.time()-st), '(s)')
     
     rolls = seq2roll(est_arr[:,1])
-    write_midi(output_path+'.mid', np.expand_dims(rolls.astype(bool),2), program_nums=[0], is_drums=[False])
+    print("rolls:", rolls.shape)
+    write_midi(Time_arr[-1] - Time_arr[0], output_path+'.mid', np.expand_dims(rolls.astype(bool),2), program_nums=[0], is_drums=[False])
 
     print('Save the result in '+output_path+'.mid')
 if __name__ == '__main__':
