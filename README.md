@@ -25,6 +25,8 @@ or
 python3 audio2midi.py
 ```
 Results will save in './output/'
+
+Or you can set your own input and output path by using `-in` and `-out`.
 #### audio2midi.py
 ```
 usage: audio2midi.py [-h] [-in INPUT_FOLDER] [-out OUTPUT_FOLDER] [-m]
